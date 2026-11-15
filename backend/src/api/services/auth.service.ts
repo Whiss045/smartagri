@@ -4,7 +4,7 @@
  * it never creates, edits or deletes accounts.
  */
 import argon2 from "argon2";
-import jwt, { SignOptions } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import { User } from "../models";
 import { HttpError } from "../utils/http";
 
@@ -15,8 +15,9 @@ export const AUTH_COOKIE = "smartagri_session";
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) throw new Error("JWT_SECRET is not set");
 
-const JWT_EXPIRES_IN = (process.env.JWT_EXPIRES_IN ??
-  "8h") as SignOptions["expiresIn"];
+const hours = Number(process.env.SESSION_HOURS ?? 8);
+export const SESSION_SECONDS =
+  (Number.isFinite(hours) && hours > 0 ? hours : 8) * 3600;
 
 // Verifies credentials and returns a signed token. The controller puts it in the cookie.
 export async function login(username: unknown, password: unknown) {
@@ -44,7 +45,7 @@ export async function login(username: unknown, password: unknown) {
   // The token only carries the user id (as `sub`), nothing sensitive
   const token = jwt.sign({}, JWT_SECRET as string, {
     subject: String(user.id),
-    expiresIn: JWT_EXPIRES_IN,
+    expiresIn: SESSION_SECONDS,
   });
 
   return { token, user: { id: user.id, username: user.username } };
