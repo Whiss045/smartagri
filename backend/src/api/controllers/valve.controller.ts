@@ -4,7 +4,7 @@
  */
 import type { Request, Response } from "express";
 import * as valveService from "../services/valve.service";
-import { bodyOf } from "../utils/http";
+import { bodyOf, idParam } from "../utils/http";
 
 // GET /api/valves?parcelId=1
 export async function list(req: Request, res: Response) {
@@ -14,7 +14,7 @@ export async function list(req: Request, res: Response) {
 
 // GET /api/valves/:id
 export async function get(req: Request, res: Response) {
-  res.json(await valveService.getValve(Number(req.params.id)));
+  res.json(await valveService.getValve(idParam(req)));
 }
 
 // POST /api/valves (maps a device channel to a valve/pump)
@@ -24,12 +24,12 @@ export async function create(req: Request, res: Response) {
 
 // PUT /api/valves/:id
 export async function update(req: Request, res: Response) {
-  res.json(await valveService.updateValve(Number(req.params.id), bodyOf(req)));
+  res.json(await valveService.updateValve(idParam(req), bodyOf(req)));
 }
 
 // DELETE /api/valves/:id
 export async function remove(req: Request, res: Response) {
-  await valveService.deleteValve(Number(req.params.id));
+  await valveService.deleteValve(idParam(req));
   res.status(204).send();
 }
 
@@ -37,7 +37,7 @@ export async function remove(req: Request, res: Response) {
 // 202 Accepted: the command was SENT; the real state arrives later via MQTT status
 export async function command(req: Request, res: Response) {
   const result = await valveService.commandValve(
-    Number(req.params.id),
+    idParam(req),
     bodyOf(req).action,
     "manual",
   );

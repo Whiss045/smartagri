@@ -5,7 +5,7 @@
  */
 import type { Request, Response } from "express";
 import * as sensorService from "../services/sensor.service";
-import { bodyOf } from "../utils/http";
+import { bodyOf, idParam } from "../utils/http";
 
 // GET /api/sensors?parcelId=1 (each sensor includes its latest reading)
 export async function list(req: Request, res: Response) {
@@ -15,7 +15,7 @@ export async function list(req: Request, res: Response) {
 
 // GET /api/sensors/:id
 export async function get(req: Request, res: Response) {
-  res.json(await sensorService.getSensor(Number(req.params.id)));
+  res.json(await sensorService.getSensor(idParam(req)));
 }
 
 // POST /api/sensors (maps a device channel to a sensor)
@@ -25,15 +25,11 @@ export async function create(req: Request, res: Response) {
 
 // PUT /api/sensors/:id (metadata only)
 export async function update(req: Request, res: Response) {
-  res.json(
-    await sensorService.updateSensor(Number(req.params.id), bodyOf(req)),
-  );
+  res.json(await sensorService.updateSensor(idParam(req), bodyOf(req)));
 }
 
 // GET /api/sensors/:id/readings?from=&to=&limit=
 export async function readings(req: Request, res: Response) {
   const { from, to, limit } = req.query;
-  res.json(
-    await sensorService.getReadings(Number(req.params.id), { from, to, limit }),
-  );
+  res.json(await sensorService.getReadings(idParam(req), { from, to, limit }));
 }

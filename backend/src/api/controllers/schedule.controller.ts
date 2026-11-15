@@ -4,7 +4,7 @@
  */
 import type { Request, Response } from "express";
 import * as scheduleService from "../services/schedule.service";
-import { bodyOf } from "../utils/http";
+import { bodyOf, idParam } from "../utils/http";
 
 // GET /api/schedules?parcelId=1&system=heating
 export async function list(req: Request, res: Response) {
@@ -16,7 +16,7 @@ export async function list(req: Request, res: Response) {
 
 // GET /api/schedules/:id
 export async function get(req: Request, res: Response) {
-  res.json(await scheduleService.getSchedule(Number(req.params.id)));
+  res.json(await scheduleService.getSchedule(idParam(req)));
 }
 
 // POST /api/schedules
@@ -26,13 +26,11 @@ export async function create(req: Request, res: Response) {
 
 // PUT /api/schedules/:id
 export async function update(req: Request, res: Response) {
-  res.json(
-    await scheduleService.updateSchedule(Number(req.params.id), bodyOf(req)),
-  );
+  res.json(await scheduleService.updateSchedule(idParam(req), bodyOf(req)));
 }
 
 // DELETE /api/schedules/:id
 export async function remove(req: Request, res: Response) {
-  await scheduleService.deleteSchedule(Number(req.params.id));
+  await scheduleService.deleteSchedule(idParam(req));
   res.status(204).send();
 }
