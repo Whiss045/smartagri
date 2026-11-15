@@ -3,7 +3,12 @@
  * Handles login, logout and "who am I". Owns the session COOKIE (the service owns the logic).
  */
 import type { Request, Response } from "express";
-import { AUTH_COOKIE, getFarmer, login } from "../services/auth.service";
+import {
+  AUTH_COOKIE,
+  getFarmer,
+  login,
+  SESSION_SECONDS,
+} from "../services/auth.service";
 import { bodyOf } from "../utils/http";
 
 // Cookie hardening:
@@ -24,7 +29,7 @@ export async function loginHandler(req: Request, res: Response) {
 
   res.cookie(AUTH_COOKIE, token, {
     ...cookieOptions,
-    maxAge: 8 * 60 * 60 * 1000,
+    maxAge: SESSION_SECONDS * 1000,
   }); // 8 hours
   res.json({ user }); // The token itself is never returned in the body
 }
