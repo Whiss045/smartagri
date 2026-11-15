@@ -4,7 +4,8 @@
  */
 import { Parcel, Device, Valve, Sensor, Schedule } from "../models";
 import { PARCEL_TYPES } from "../models/parcel.model";
-import { unassignDevice } from "./device.service";
+import sequelize from "../../config/database";
+import { releaseDevice } from "./device.service";
 import { HttpError, asEnum, asText } from "../utils/http";
 
 // Dashboard overview: every parcel with its devices, equipment and sensors
@@ -69,13 +70,17 @@ export async function updateParcel(id: number, input: Record<string, unknown>) {
 }
 
 // Deletes a parcel safely: devices are released first so nothing is left half-linked
+// One transaction around the whole deletion: if any step fails, nothing is changed
 export async function deleteParcel(id: number): Promise<void> {
   const parcel = await Parcel.findByPk(id);
   if (!parcel) throw new HttpError(404, "Parcel not found");
 
-  // Release devices (removes valves/schedules, detaches sensors, keeps history)
-  const devices = await Device.findAll({ where: { parcelId: id } });
-  for (const device of devices) await unassignDevice(device.id);
-
-  await parcel.destroy();
+  await sequelize.transaction(async (transaction) => {
+    const devices = await Device.findAll({
+      where: { parcelId: id },
+      transaction,
+    });
+    for (const device of devices) await releaseDevice(device, transaction);
+    await parcel.destroy({ transaction });
+  });
 }

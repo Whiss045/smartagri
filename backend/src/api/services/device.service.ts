@@ -7,7 +7,7 @@
  * The backend never trusts a device: identity, assignment and channel mapping
  * are re-checked in the database for every message.
  */
-import { Op } from "sequelize";
+import { Op, type Transaction } from "sequelize";
 import sequelize from "../../config/database";
 import { Device, Parcel, Valve, Sensor, SensorReading } from "../models";
 import { HttpError, asInt, asText, isRecord } from "../utils/http";
@@ -98,20 +98,27 @@ export async function assignDevice(id: number, input: Record<string, unknown>) {
 
 // Releases a device: deletes its valves (and their schedules), detaches its sensors.
 // Sensor history is always preserved.
+// Core release logic. It runs inside a transaction supplied by the caller, so it can be
+// part of a bigger operation (such as deleting a parcel) that must succeed or fail as a whole.
+export async function releaseDevice(
+  device: Device,
+  transaction: Transaction,
+): Promise<void> {
+  await Valve.destroy({ where: { deviceId: device.id }, transaction }); // schedules go via CASCADE
+  await Sensor.update(
+    { deviceId: null, parcelId: null, active: false }, // sensors stay, history is kept
+    { where: { deviceId: device.id }, transaction },
+  );
+  await device.update({ parcelId: null }, { transaction });
+}
+
 export async function unassignDevice(id: number) {
   const device = await Device.findByPk(id);
   if (!device) throw new HttpError(404, "Device not found");
 
-  // Transaction: either all three changes happen or none do
-  await sequelize.transaction(async (transaction) => {
-    await Valve.destroy({ where: { deviceId: device.id }, transaction });
-    await Sensor.update(
-      { deviceId: null, parcelId: null, active: false },
-      { where: { deviceId: device.id }, transaction },
-    );
-    await device.update({ parcelId: null }, { transaction });
-  });
-
+  await sequelize.transaction((transaction) =>
+    releaseDevice(device, transaction),
+  );
   return toDto(device);
 }
 
