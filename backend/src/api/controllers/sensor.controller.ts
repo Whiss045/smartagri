@@ -5,11 +5,11 @@
  */
 import type { Request, Response } from "express";
 import * as sensorService from "../services/sensor.service";
-import { bodyOf, idParam } from "../utils/http";
+import { bodyOf, idParam, optionalId } from "../utils/http";
 
 // GET /api/sensors?parcelId=1 (each sensor includes its latest reading)
 export async function list(req: Request, res: Response) {
-  const parcelId = req.query.parcelId ? Number(req.query.parcelId) : undefined;
+  const parcelId = optionalId(req.query.parcelId, "parcelId");
   res.json(await sensorService.listSensors(parcelId));
 }
 
