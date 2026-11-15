@@ -77,3 +77,13 @@ export function asEnum<T extends string>(
   }
   return v as T;
 }
+
+// Route parameter -> validated positive integer (a bad id gives a clean 400, not a database error)
+export const idParam = (req: Request, name = "id"): number =>
+  asInt(req.params[name], name, 1, 4294967295);
+
+// Optional query id such as ?parcelId=2. Returns undefined when absent.
+export function optionalId(v: unknown, field: string): number | undefined {
+  if (v === undefined || v === "") return undefined;
+  return asInt(v, field, 1, 4294967295);
+}
