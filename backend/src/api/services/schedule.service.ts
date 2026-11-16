@@ -3,12 +3,68 @@
  * CRUD for irrigation and heating schedules (what the farmer edits in the dashboard).
  * Actual EXECUTION of schedules happens in scheduler.service.ts.
  */
+import { Op } from "sequelize";
 import { Schedule, Valve } from "../models";
 import { SYSTEMS } from "../models/valve.model";
 import { commandValve } from "./valve.service";
 import { HttpError, asEnum, asInt, asText } from "../utils/http";
 
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/; // Strict 24h "HH:mm"
+
+const DAY = 1440; // minutes
+const WEEK = 7 * DAY;
+
+// Each run becomes an interval [start, end) on a weekly timeline measured in minutes
+function runsOf(
+  days: number[],
+  startTime: string,
+  durationMinutes: number,
+): [number, number][] {
+  const [h, m] = startTime.split(":").map(Number);
+  return days.map((d) => {
+    const start = d * DAY + h * 60 + m;
+    return [start, start + durationMinutes];
+  });
+}
+
+// The week is circular: a Saturday-night run can spill into Sunday morning
+function overlaps(a: [number, number], b: [number, number]): boolean {
+  return [-WEEK, 0, WEEK].some(
+    (shift) => a[0] < b[1] + shift && b[0] + shift < a[1],
+  );
+}
+
+// Rejects the change if it collides with another enabled schedule on the same valve
+async function assertNoOverlap(
+  valveId: number,
+  days: number[],
+  startTime: string,
+  durationMinutes: number,
+  ignoreId?: number,
+): Promise<void> {
+  const others = await Schedule.findAll({
+    where: {
+      valveId,
+      enabled: true,
+      ...(ignoreId ? { id: { [Op.ne]: ignoreId } } : {}),
+    },
+  });
+  const mine = runsOf(days, startTime, durationMinutes);
+
+  for (const other of others) {
+    const theirs = runsOf(
+      other.daysOfWeek,
+      other.startTime,
+      other.durationMinutes,
+    );
+    if (mine.some((a) => theirs.some((b) => overlaps(a, b)))) {
+      throw new HttpError(
+        409,
+        `Overlaps with the schedule "${other.name}" on the same valve`,
+      );
+    }
+  }
+}
 
 // Validates a start time string
 function parseTime(v: unknown): string {
@@ -56,15 +112,30 @@ export async function createSchedule(input: Record<string, unknown>) {
   );
   if (!valve) throw new HttpError(404, "Valve not found");
 
+  const name = asText(input.name, "name") as string;
+  const startTime = parseTime(input.startTime);
+  const durationMinutes = asInt(
+    input.durationMinutes,
+    "durationMinutes",
+    1,
+    1440,
+  );
+  const daysOfWeek = parseDays(input.daysOfWeek);
+  const enabled = input.enabled === undefined ? true : input.enabled === true;
+
+  // A disabled schedule never runs, so it can't conflict
+  if (enabled)
+    await assertNoOverlap(valve.id, daysOfWeek, startTime, durationMinutes);
+
   return Schedule.create({
     parcelId: valve.parcelId,
     valveId: valve.id,
     system: valve.system,
-    name: asText(input.name, "name") as string,
-    startTime: parseTime(input.startTime),
-    durationMinutes: asInt(input.durationMinutes, "durationMinutes", 1, 1440),
-    daysOfWeek: parseDays(input.daysOfWeek),
-    enabled: input.enabled === undefined ? true : input.enabled === true,
+    name,
+    startTime,
+    durationMinutes,
+    daysOfWeek,
+    enabled,
   });
 }
 
@@ -93,6 +164,15 @@ export async function updateSchedule(
     if (typeof input.enabled !== "boolean")
       throw new HttpError(400, "enabled must be a boolean");
     schedule.enabled = input.enabled;
+  }
+  if (schedule.enabled) {
+    await assertNoOverlap(
+      schedule.valveId,
+      schedule.daysOfWeek,
+      schedule.startTime,
+      schedule.durationMinutes,
+      schedule.id, // ignore itself
+    );
   }
 
   // If the schedule is running right now and the farmer disables or retimes it,
