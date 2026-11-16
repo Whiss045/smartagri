@@ -4,11 +4,12 @@
  * Also reused by the scheduler to execute schedules, so manual and automatic
  * control go through the exact same safety checks.
  */
-import { Device, Parcel, Valve } from "../models";
+import { Device, Parcel, Schedule, Valve } from "../models";
 import { SYSTEMS, VALVE_KINDS } from "../models/valve.model";
 import { isOnline } from "./device.service";
 import { publishCommand } from "./mqtt.service";
 import { HttpError, asEnum, asInt, asText } from "../utils/http";
+import { Op } from "sequelize";
 
 export async function listValves(parcelId?: number) {
   return Valve.findAll({
@@ -78,16 +79,15 @@ export async function commandValve(
   id: number,
   action: unknown,
   source: "manual" | "schedule" = "manual",
+  options: { durationSeconds?: number } = {},
 ) {
   const act = asEnum(action, "action", ["on", "off"] as const);
 
   const valve = await getValve(id);
-  // Safety: never switch on equipment that reported a fault
   if (act === "on" && valve.state === "fault") {
     throw new HttpError(409, "Equipment is in a fault state");
   }
 
-  // Re-validate that the device still belongs to the same parcel as the valve
   const device = await Device.findByPk(valve.deviceId);
   if (!device || device.parcelId !== valve.parcelId) {
     throw new HttpError(
@@ -101,11 +101,24 @@ export async function commandValve(
     await publishCommand(device.deviceUid, {
       channel: valve.channel,
       action: act,
-      source, // Lets the firmware/logs know if it was manual or scheduled
+      source,
+      // The ESP32 enforces this itself, so it shuts the valve even if the backend/network is lost
+      ...(act === "on" && options.durationSeconds
+        ? { durationSeconds: options.durationSeconds }
+        : {}),
       ts: Date.now(),
     });
   } catch {
     throw new HttpError(503, "MQTT broker unavailable");
+  }
+
+  // Manual control wins: cancel the stop timer of any schedule running on this valve.
+  // lastRunDate is untouched, so that schedule will not restart again today.
+  if (source === "manual") {
+    await Schedule.update(
+      { activeUntil: null },
+      { where: { valveId: valve.id, activeUntil: { [Op.ne]: null } } },
+    );
   }
 
   return { valveId: valve.id, action: act, status: "sent" };
