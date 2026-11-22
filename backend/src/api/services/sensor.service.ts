@@ -5,19 +5,15 @@
  */
 import { Op, type CreationAttributes, type WhereOptions } from "sequelize";
 import sequelize from "../../config/database";
-import { Sensor, SensorReading } from "../models";
+import { Device, Sensor, SensorReading } from "../models";
 import { SENSOR_TYPES } from "../models/sensor.model";
+import { isOnline } from "./device.service";
 import { assertPlotInParcel, resolvePlacement } from "./placement.service";
-import {
-  HttpError,
-  asEnum,
-  asInt,
-  asOptionalInt,
-  asText,
-  isRecord,
-} from "../utils/http";
+import { HttpError, asEnum, asInt, asText, isRecord } from "../utils/http";
 
-// Lists sensors with their latest reading (for dashboard tiles)
+type SensorWithDevice = Sensor & { device?: Device | null };
+
+// Lists sensors with their latest reading and an `online` flag (= its device is online)
 export async function listSensors(
   filter: { parcelId?: number; plotId?: number; unassigned?: boolean } = {},
 ) {
@@ -26,7 +22,13 @@ export async function listSensors(
   if (filter.plotId) where.plotId = filter.plotId;
   if (filter.unassigned) where.deviceId = null; // the "unassigned sensors" list
 
-  const sensors = await Sensor.findAll({ where, order: [["name", "ASC"]] });
+  const sensors = await Sensor.findAll({
+    where,
+    include: [
+      { model: Device, as: "device", attributes: ["id", "lastSeenAt"] },
+    ],
+    order: [["name", "ASC"]],
+  });
 
   return Promise.all(
     sensors.map(async (sensor) => {
@@ -35,7 +37,14 @@ export async function listSensors(
         order: [["recordedAt", "DESC"]],
         attributes: ["value", "recordedAt"],
       });
-      return { ...sensor.toJSON(), latestReading: latest };
+      const device = (sensor as SensorWithDevice).device;
+      const json = sensor.toJSON() as Record<string, unknown>;
+      delete json.device; // only the flag is sent
+      return {
+        ...json,
+        online: !!device && isOnline(device),
+        latestReading: latest,
+      };
     }),
   );
 }
@@ -71,7 +80,7 @@ function parseSensorFields(s: Record<string, unknown>) {
 // REGISTER one or several sensors in a single all-or-nothing transaction
 // (several = one physical sensor with multiple measurements, such as a DHT22).
 // Body: { sensors: [{ name, type, unit, channel? }], deviceId?, plotId? }
-// Without deviceId they stay unassigned; with deviceId every entry needs its own channel.
+// Without deviceId they stay unassigned; with deviceId every entry needs its own channel and a plot.
 export async function createSensors(input: Record<string, unknown>) {
   const list = input.sensors;
   if (!Array.isArray(list) || list.length === 0 || list.length > 8) {
@@ -86,6 +95,7 @@ export async function createSensors(input: Record<string, unknown>) {
   // Validate EVERYTHING first, so a bad entry cannot leave a half-created sensor
   const rows: CreationAttributes<Sensor>[] = [];
   const usedChannels = new Set<number>();
+
   for (const item of list) {
     if (!isRecord(item))
       throw new HttpError(400, "Invalid sensor entry", "VALIDATION");
@@ -138,7 +148,7 @@ export async function createSensor(input: Record<string, unknown>) {
   return sensor;
 }
 
-// ASSIGN an unassigned sensor to a device channel. It starts recording again.
+// ASSIGN an unassigned sensor to a device channel and a plot. It starts recording again.
 export async function assignSensor(id: number, input: Record<string, unknown>) {
   const sensor = await getSensor(id);
   if (sensor.deviceId !== null) {
@@ -180,6 +190,7 @@ export async function unassignSensor(id: number) {
 }
 
 // Editable: name, unit, active and plot. Type, device and channel are fixed.
+// The plot can be changed but never cleared.
 export async function updateSensor(id: number, input: Record<string, unknown>) {
   const sensor = await getSensor(id);
 
@@ -193,17 +204,15 @@ export async function updateSensor(id: number, input: Record<string, unknown>) {
     sensor.active = input.active;
   }
   if (input.plotId !== undefined) {
-    const plotId = asOptionalInt(input.plotId, "plotId", 1, 4294967295);
-    if (plotId !== null) {
-      if (sensor.parcelId === null) {
-        throw new HttpError(
-          409,
-          "Assign the sensor to a device first",
-          "SENSOR_NOT_ASSIGNED",
-        );
-      }
-      await assertPlotInParcel(plotId, sensor.parcelId);
+    if (sensor.parcelId === null) {
+      throw new HttpError(
+        409,
+        "Assign the sensor to a device first",
+        "SENSOR_NOT_ASSIGNED",
+      );
     }
+    const plotId = asInt(input.plotId, "plotId", 1, 4294967295);
+    await assertPlotInParcel(plotId, sensor.parcelId);
     sensor.plotId = plotId;
   }
 

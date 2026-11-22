@@ -44,13 +44,19 @@ const toDto = (d: Device) => ({
 
 /* ========================= HTTP-facing operations ========================= */
 
-// Lists devices. With unassignedOnly = true it powers the "unassigned devices" list.
-export async function listDevices(unassignedOnly = false) {
+// Lists devices. { unassigned: true } powers the unassigned list; { parcelId } a parcel's grid.
+export async function listDevices(
+  filter: { unassigned?: boolean; parcelId?: number } = {},
+) {
+  const where: Record<string, unknown> = {};
+  if (filter.unassigned) where.parcelId = null;
+  else if (filter.parcelId) where.parcelId = filter.parcelId;
+
   const devices = await Device.findAll({
-    where: unassignedOnly ? { parcelId: null } : {},
+    where,
     order: [["createdAt", "DESC"]],
   });
-  return devices.map(toDto);
+  return devices.map(toDto); // each one carries `online`
 }
 
 // One device with its mapped valves and sensors
@@ -61,7 +67,7 @@ export async function getDevice(id: number) {
       { model: Sensor, as: "sensors" },
     ],
   });
-  if (!device) throw new HttpError(404, "Device not found");
+  if (!device) throw new HttpError(404, "Device not found", "DEVICE_NOT_FOUND");
   return {
     ...device.toJSON(),
     assigned: device.parcelId !== null,
@@ -72,7 +78,7 @@ export async function getDevice(id: number) {
 // Only the friendly name is editable; identity (deviceUid) never changes
 export async function updateDevice(id: number, input: Record<string, unknown>) {
   const device = await Device.findByPk(id);
-  if (!device) throw new HttpError(404, "Device not found");
+  if (!device) throw new HttpError(404, "Device not found", "DEVICE_NOT_FOUND");
   if (input.name !== undefined)
     device.name = asText(input.name, "name", { required: false });
   await device.save();
@@ -83,10 +89,10 @@ export async function updateDevice(id: number, input: Record<string, unknown>) {
 export async function assignDevice(id: number, input: Record<string, unknown>) {
   const parcelId = asInt(input.parcelId, "parcelId", 1, 4294967295);
   const device = await Device.findByPk(id);
-  if (!device) throw new HttpError(404, "Device not found");
+  if (!device) throw new HttpError(404, "Device not found", "DEVICE_NOT_FOUND");
 
   const parcel = await Parcel.findByPk(parcelId);
-  if (!parcel) throw new HttpError(404, "Parcel not found");
+  if (!parcel) throw new HttpError(404, "Parcel not found", "PARCEL_NOT_FOUND");
 
   // Moving a device between parcels directly is blocked: it would leave valves/sensors
   // pointing at the wrong parcel. It must be unassigned first.
@@ -104,13 +110,10 @@ export async function assignDevice(id: number, input: Record<string, unknown>) {
   return toDto(device);
 }
 
-// Releases a device: deletes its valves (and their schedules), detaches its sensors.
-// Sensor history is always preserved.
-// Core release logic. It runs inside a transaction supplied by the caller, so it can be
-// part of a bigger operation (such as deleting a parcel) that must succeed or fail as a whole.
-// Core release logic, run inside a transaction supplied by the caller.
-// Valves and sensors are DETACHED (they become unassigned), never deleted.
-// Schedules of the detached valves are deleted, because a schedule needs an assigned valve.
+// Core release logic, run inside a transaction supplied by the caller (so it can be part of
+// a bigger operation such as deleting a parcel). Valves and sensors are DETACHED (they become
+// unassigned), never deleted. Schedules of the detached valves are deleted, because a schedule
+// needs an assigned valve.
 export async function releaseDevice(
   device: Device,
   transaction: Transaction,
@@ -169,6 +172,17 @@ export async function releaseDevice(
     { where: { deviceId: device.id }, transaction }, // readings are untouched
   );
   await device.update({ parcelId: null }, { transaction });
+}
+
+// Unassigns a device from its parcel (everything in one transaction)
+export async function unassignDevice(id: number) {
+  const device = await Device.findByPk(id);
+  if (!device) throw new HttpError(404, "Device not found", "DEVICE_NOT_FOUND");
+
+  await sequelize.transaction((transaction) =>
+    releaseDevice(device, transaction),
+  );
+  return toDto(device);
 }
 
 /* =========================== MQTT ingestion ================================ */

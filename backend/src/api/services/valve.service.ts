@@ -9,7 +9,17 @@ import { SYSTEMS, VALVE_KINDS, type SystemType } from "../models/valve.model";
 import { isOnline } from "./device.service";
 import { publishCommand } from "./mqtt.service";
 import { assertPlotInParcel, resolvePlacement } from "./placement.service";
-import { HttpError, asEnum, asOptionalInt, asText } from "../utils/http";
+import { HttpError, asEnum, asInt, asText } from "../utils/http";
+
+type ValveWithDevice = Valve & { device?: Device | null };
+
+// Adds `deviceOnline` so the card can disable the control button when the device is offline.
+// Only the flag is sent, not the device row.
+function toDto(valve: ValveWithDevice) {
+  const json = valve.toJSON() as Record<string, unknown>;
+  delete json.device;
+  return { ...json, deviceOnline: !!valve.device && isOnline(valve.device) };
+}
 
 export async function listValves(
   filter: { parcelId?: number; plotId?: number; unassigned?: boolean } = {},
@@ -18,13 +28,33 @@ export async function listValves(
   if (filter.parcelId) where.parcelId = filter.parcelId;
   if (filter.plotId) where.plotId = filter.plotId;
   if (filter.unassigned) where.deviceId = null; // the "unassigned valves" list
-  return Valve.findAll({ where, order: [["name", "ASC"]] });
+
+  const valves = await Valve.findAll({
+    where,
+    include: [
+      { model: Device, as: "device", attributes: ["id", "lastSeenAt"] },
+    ],
+    order: [["name", "ASC"]],
+  });
+  return valves.map((v) => toDto(v as ValveWithDevice));
 }
 
+// Internal lookup (returns the model so callers can update it)
 export async function getValve(id: number) {
   const valve = await Valve.findByPk(id);
   if (!valve) throw new HttpError(404, "Valve not found", "VALVE_NOT_FOUND");
   return valve;
+}
+
+// Detail view for GET /valves/:id (DTO with deviceOnline)
+export async function getValveDetail(id: number) {
+  const valve = await Valve.findByPk(id, {
+    include: [
+      { model: Device, as: "device", attributes: ["id", "lastSeenAt"] },
+    ],
+  });
+  if (!valve) throw new HttpError(404, "Valve not found", "VALVE_NOT_FOUND");
+  return toDto(valve as ValveWithDevice);
 }
 
 // Business rule: heating equipment exists only in greenhouses
@@ -52,7 +82,7 @@ async function assertChannelFree(
   }
 }
 
-// REGISTER a valve. Without deviceId it stays unassigned; with deviceId + channel (+ plotId)
+// REGISTER a valve. Without deviceId it stays unassigned; with deviceId + channel + plotId
 // it is registered and assigned in one step.
 export async function createValve(input: Record<string, unknown>) {
   const name = asText(input.name, "name") as string;
@@ -78,7 +108,7 @@ export async function createValve(input: Record<string, unknown>) {
   });
 }
 
-// ASSIGN an unassigned valve to a device channel
+// ASSIGN an unassigned valve to a device channel and a plot
 export async function assignValve(id: number, input: Record<string, unknown>) {
   const valve = await getValve(id);
   if (valve.deviceId !== null) {
@@ -135,23 +165,22 @@ export async function unassignValve(id: number) {
 }
 
 // Editable: name and plot. Device, channel, kind and system are fixed.
+// The plot can be changed but never cleared: an assigned valve always lives in a plot.
 export async function updateValve(id: number, input: Record<string, unknown>) {
   const valve = await getValve(id);
 
   if (input.name !== undefined)
     valve.name = asText(input.name, "name") as string;
   if (input.plotId !== undefined) {
-    const plotId = asOptionalInt(input.plotId, "plotId", 1, 4294967295);
-    if (plotId !== null) {
-      if (valve.parcelId === null) {
-        throw new HttpError(
-          409,
-          "Assign the valve to a device first",
-          "VALVE_NOT_ASSIGNED",
-        );
-      }
-      await assertPlotInParcel(plotId, valve.parcelId);
+    if (valve.parcelId === null) {
+      throw new HttpError(
+        409,
+        "Assign the valve to a device first",
+        "VALVE_NOT_ASSIGNED",
+      );
     }
+    const plotId = asInt(input.plotId, "plotId", 1, 4294967295);
+    await assertPlotInParcel(plotId, valve.parcelId);
     valve.plotId = plotId;
   }
   await valve.save();

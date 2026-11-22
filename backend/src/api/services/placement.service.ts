@@ -4,16 +4,16 @@
  * and sensors, so the rules are written once.
  *   - the device must exist and already belong to a parcel
  *   - the channel must be a valid number
- *   - an optional plot must belong to that same parcel
+ *   - a plot is REQUIRED and must belong to that same parcel
  */
 import { Device, Parcel, Plot } from "../models";
-import { HttpError, asInt, asOptionalInt } from "../utils/http";
+import { HttpError, asInt } from "../utils/http";
 
 export type Placement = {
   device: Device;
   parcel: Parcel;
   channel: number;
-  plotId: number | null;
+  plotId: number; // required: equipment always lives in a plot
 };
 
 // A plot can only be used by equipment whose device sits in the plot's own parcel
@@ -32,7 +32,7 @@ export async function assertPlotInParcel(
   }
 }
 
-// Validates { deviceId, channel, plotId? } and returns everything the caller needs
+// Validates { deviceId, channel, plotId } and returns everything the caller needs
 export async function resolvePlacement(
   input: Record<string, unknown>,
 ): Promise<Placement> {
@@ -53,8 +53,16 @@ export async function resolvePlacement(
 
   const channel = asInt(input.channel, "channel", 0, 255);
 
-  const plotId = asOptionalInt(input.plotId, "plotId", 1, 4294967295);
-  if (plotId !== null) await assertPlotInParcel(plotId, parcel.id);
+  // Equipment is always assigned to a plot, and that plot must be in the device's parcel
+  if (
+    input.plotId === undefined ||
+    input.plotId === null ||
+    input.plotId === ""
+  ) {
+    throw new HttpError(400, "A plot is required", "PLOT_REQUIRED");
+  }
+  const plotId = asInt(input.plotId, "plotId", 1, 4294967295);
+  await assertPlotInParcel(plotId, parcel.id);
 
   return { device, parcel, channel, plotId };
 }

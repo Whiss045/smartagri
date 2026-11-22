@@ -17,9 +17,9 @@ export async function list(req: Request, res: Response) {
   );
 }
 
-// GET /api/valves/:id
+// GET /api/valves/:id (includes deviceOnline)
 export async function get(req: Request, res: Response) {
-  res.json(await valveService.getValve(idParam(req)));
+  res.json(await valveService.getValveDetail(idParam(req)));
 }
 
 // POST /api/valves   { name, kind?, system?, deviceId?, channel?, plotId? }
@@ -38,7 +38,7 @@ export async function remove(req: Request, res: Response) {
   res.status(204).send();
 }
 
-// POST /api/valves/:id/assign   { deviceId, channel, plotId? }
+// POST /api/valves/:id/assign   { deviceId, channel, plotId }
 export async function assign(req: Request, res: Response) {
   res.json(await valveService.assignValve(idParam(req), bodyOf(req)));
 }

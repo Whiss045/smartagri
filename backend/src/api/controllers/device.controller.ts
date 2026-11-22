@@ -5,11 +5,16 @@
  */
 import type { Request, Response } from "express";
 import * as deviceService from "../services/device.service";
-import { bodyOf, idParam } from "../utils/http";
+import { bodyOf, idParam, optionalId } from "../utils/http";
 
-// GET /api/devices or GET /api/devices?unassigned=true
+// GET /api/devices?unassigned=true  or  ?parcelId=1
 export async function list(req: Request, res: Response) {
-  res.json(await deviceService.listDevices(req.query.unassigned === "true"));
+  res.json(
+    await deviceService.listDevices({
+      unassigned: req.query.unassigned === "true",
+      parcelId: optionalId(req.query.parcelId, "parcelId"),
+    }),
+  );
 }
 
 // GET /api/devices/:id
@@ -22,7 +27,7 @@ export async function update(req: Request, res: Response) {
   res.json(await deviceService.updateDevice(idParam(req), bodyOf(req)));
 }
 
-// POST /api/devices/:id/assign with { "parcelId": 1 }
+// POST /api/devices/:id/assign with { "parcelId": 1, "name"?: "..." }
 export async function assign(req: Request, res: Response) {
   res.json(await deviceService.assignDevice(idParam(req), bodyOf(req)));
 }
