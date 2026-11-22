@@ -1,0 +1,80 @@
+/* Grid shell: header on top, side menu + content below. In RTL the first column is on the right. */
+.shell {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  grid-template-rows: 56px 1fr;
+  min-height: 100vh;
+}
+.header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-inline: 16px;
+  background: var(--primary);
+  color: #fff;
+}
+.brand {
+  font-weight: 700;
+  font-size: 1.15rem;
+  flex: 1;
+}
+.user {
+  font-size: 0.9rem;
+}
+.menuBtn {
+  display: none;
+}
+.side {
+  background: var(--surface);
+  border-inline-end: 1px solid var(--border);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.link {
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: var(--text);
+  text-decoration: none;
+}
+.link:hover {
+  background: #eef2ea;
+}
+.active {
+  background: var(--primary);
+  color: #fff;
+}
+.active:hover {
+  background: var(--primary);
+}
+.main {
+  padding: 24px;
+  min-width: 0;
+}
+
+/* Phones: the menu becomes a slide-in drawer */
+@media (max-width: 800px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+  .menuBtn {
+    display: inline-flex;
+  }
+  .side {
+    position: fixed;
+    inset-block: 56px 0;
+    inset-inline-start: 0;
+    width: 240px;
+    z-index: 20;
+    transform: translateX(100%);
+    transition: transform 0.2s;
+  }
+  .sideOpen {
+    transform: none;
+  }
+  .main {
+    padding: 16px;
+  }
+}

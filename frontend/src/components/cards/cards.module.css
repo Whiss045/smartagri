@@ -1,0 +1,48 @@
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.top {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+}
+.clickable {
+  cursor: pointer;
+}
+.clickable:hover {
+  background: #f8faf6;
+}
+.img {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  flex: none;
+}
+.title {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.body {
+  padding: 0 14px 10px;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+}

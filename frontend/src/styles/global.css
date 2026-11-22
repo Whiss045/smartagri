@@ -1,0 +1,197 @@
+/* Reset + shared primitives. Logical properties (inline/block) keep RTL correct. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  line-height: 1.5;
+}
+h1,
+h2 {
+  margin: 0;
+}
+h1 {
+  font-size: 1.5rem;
+}
+h2 {
+  font-size: 1.15rem;
+}
+a {
+  color: var(--primary);
+}
+.muted {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 2px 0;
+}
+.center-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 16px;
+}
+
+/* Buttons */
+.btn {
+  font: inherit;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+.btn:hover:not(:disabled) {
+  background: #eef2ea;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn--primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+.btn--primary:hover:not(:disabled) {
+  background: var(--primary-dark);
+}
+.btn--danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+/* Page header, tabs, grid */
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.section {
+  margin-top: 28px;
+}
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.tabs .btn[aria-pressed="true"] {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+.empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+
+/* Forms */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.field > span {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+input,
+select,
+textarea {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  width: 100%;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+.form-error {
+  background: #fdecea;
+  color: var(--danger);
+  padding: 8px 10px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+.form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.days {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.days label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.days input {
+  width: auto;
+}
+
+/* Status badges: always icon + word, never colour alone */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  border: 1px solid currentColor;
+}
+.badge--ok {
+  color: var(--ok);
+}
+.badge--off {
+  color: var(--muted);
+}
+.badge--bad {
+  color: var(--danger);
+}
+.badge--warn {
+  color: var(--warn);
+}
+
+/* Tables (sensor history) */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.table th,
+.table td {
+  text-align: start;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}

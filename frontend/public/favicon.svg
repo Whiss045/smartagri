@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <!-- Desert sunset sky -->
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FF6B3D" />
+      <stop offset="1" stop-color="#FFD54F" />
+    </linearGradient>
+    <clipPath id="tile"><rect width="64" height="64" rx="14" /></clipPath>
+
+    <!-- Frond spines (curves from the crown at 32,24). Reused for the leaflets and the centre rib. -->
+    <path id="fUp"    d="M32 24 C32 16 31 9 32 3"    fill="none" />
+    <path id="fUpL"   d="M32 24 C28 15 21 9 13 8"    fill="none" />
+    <path id="fUpR"   d="M32 24 C36 15 43 9 51 8"    fill="none" />
+    <path id="fL"     d="M32 24 C24 19 14 19 6 26"   fill="none" />
+    <path id="fR"     d="M32 24 C40 19 50 19 58 26"  fill="none" />
+    <path id="fDropL" d="M32 24 C25 25 17 29 12 37" fill="none" />
+    <path id="fDropR" d="M32 24 C39 25 47 29 52 37" fill="none" />
+  </defs>
+
+  <g clip-path="url(#tile)">
+    <!-- Sky, sun and dunes -->
+    <rect width="64" height="64" fill="url(#sky)" />
+    <circle cx="51" cy="15" r="8" fill="#FFF6B7" opacity="0.95" />
+    <path d="M0 52 Q16 43 32 50 T64 47 V64 H0 Z" fill="#F2A93B" />
+    <path d="M0 58 Q20 52 40 57 T64 55 V64 H0 Z" fill="#E08E2B" />
+
+    <!-- Trunk: straight and thick, wider at the base -->
+    <polygon points="27,58 37,58 34,26 30,26" fill="#8A5A2B" />
+    <!-- Diamond scars: the stubs of old fronds that cover a date palm trunk -->
+    <g fill="none" stroke="#5E3A19" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M30.6 32 L32 34 L33.4 32" />
+      <path d="M30 37 L32 39.5 L34 37" />
+      <path d="M29.6 42 L32 44.5 L34.4 42" />
+      <path d="M29 47 L32 49.5 L35 47" />
+      <path d="M28.4 52 L32 54.5 L35.6 52" />
+    </g>
+
+    <!-- Fronds. A wide dashed stroke makes the rows of short leaflets of a feather leaf. -->
+    <g fill="none" stroke-width="6" stroke-dasharray="1.1 1.2">
+      <g stroke="#168A3A"><use href="#fDropL" /><use href="#fDropR" /></g>
+      <g stroke="#1FA84A"><use href="#fL" /><use href="#fR" /><use href="#fUp" /></g>
+      <g stroke="#35D060"><use href="#fUpL" /><use href="#fUpR" /></g>
+    </g>
+    <!-- Centre rib of each frond -->
+    <g fill="none" stroke="#0F6B2C" stroke-width="0.9" stroke-linecap="round">
+      <use href="#fUp" /><use href="#fUpL" /><use href="#fUpR" /><use href="#fL" />
+      <use href="#fR" /><use href="#fDropL" /><use href="#fDropR" />
+    </g>
+
+    <!-- Hanging date clusters under the crown -->
+    <g stroke="#6B3E1B" stroke-width="0.8" stroke-linecap="round">
+      <line x1="31" y1="26" x2="28.5" y2="29" />
+      <line x1="33" y1="26" x2="35.5" y2="29" />
+    </g>
+    <g>
+      <ellipse cx="28" cy="29.6" rx="1.5" ry="2.1" fill="#F08C00" />
+      <ellipse cx="26.4" cy="31.2" rx="1.5" ry="2.1" fill="#D9480F" />
+      <ellipse cx="29.6" cy="31.8" rx="1.5" ry="2.1" fill="#E8590C" />
+      <ellipse cx="36" cy="29.6" rx="1.5" ry="2.1" fill="#F08C00" />
+      <ellipse cx="37.6" cy="31.2" rx="1.5" ry="2.1" fill="#D9480F" />
+      <ellipse cx="34.4" cy="31.8" rx="1.5" ry="2.1" fill="#E8590C" />
+    </g>
+  </g>
+</svg>
