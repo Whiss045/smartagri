@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type SyntheticEvent } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { ApiError } from "../api/client";
 import { errorMessage } from "../constants/labels";
@@ -14,7 +14,7 @@ export default function LoginPage() {
 
   if (user) return <Navigate to="/" replace />; // already logged in
 
-  async function submit(e: FormEvent) {
+  async function submit(e: SyntheticEvent) {
     e.preventDefault();
     setBusy(true);
     setError("");
@@ -37,7 +37,7 @@ export default function LoginPage() {
       <form
         onSubmit={submit}
         style={{
-          background: "#fff",
+          background: "var(--surface)",
           padding: 24,
           borderRadius: 12,
           width: "min(360px, 100%)",

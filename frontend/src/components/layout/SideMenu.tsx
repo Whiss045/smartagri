@@ -9,7 +9,7 @@ const ITEMS = [
   { to: "/sensors", label: "🌡️ الحساسات", end: false },
   { to: "/devices", label: "📟 الأجهزة", end: true },
   { to: "/devices/unassigned", label: "🆕 أجهزة غير مدرجة", end: false },
-  { to: "/schedules", label: "⏰ البرمجة", end: false },
+  { to: "/schedules", label: "⏰ خطة الري", end: false },
   { to: "/settings", label: "⚙️ الإعدادات", end: false },
   { to: "/about", label: "ℹ️ حول", end: false },
 ];

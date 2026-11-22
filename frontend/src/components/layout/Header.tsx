@@ -13,7 +13,7 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
       >
         ☰
       </button>
-      <span className={s.brand}>🌴 سمارت أغري</span>
+      <span className={s.brand}>🌴 SmartAgri</span>
       <span className={s.user}>{user?.username}</span>
       <button className="btn" onClick={() => void logout()}>
         خروج

@@ -1,4 +1,5 @@
 import { ApiError } from "../api/client";
+import type { FontSize, Theme } from "../hooks/appearance";
 import type {
   ParcelType,
   SensorType,
@@ -8,6 +9,18 @@ import type {
 } from "../types/models";
 
 export type Tone = "ok" | "off" | "bad" | "warn";
+
+/* ---- Settings page ---- */
+export const THEME_LABEL: Record<Theme, string> = {
+  light: "☀️ فاتح",
+  warm: "🌅 دافئ",
+  dark: "🌙 داكن",
+};
+export const FONT_LABEL: Record<FontSize, string> = {
+  small: "صغير",
+  medium: "متوسط",
+  large: "كبير",
+};
 
 /* ---- Display names for every enum the backend uses ---- */
 export const PARCEL_TYPE_LABEL: Record<ParcelType, string> = {

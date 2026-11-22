@@ -104,7 +104,9 @@ export default function ScheduleForm({
           />
         </Field>
 
-        <Field label="الأيام (اختر يومًا على الأقل)">
+        {/* A plain div, not a Field: Field is a <label>, and a label forwards every click to its first checkbox (Sunday) */}
+        <div className="field">
+          <span>الأيام (اختر يومًا على الأقل)</span>
           <div className="days">
             {WEEKDAYS.map((label, d) => (
               <label key={d}>
@@ -117,9 +119,9 @@ export default function ScheduleForm({
               </label>
             ))}
           </div>
-        </Field>
+        </div>
 
-        <label className="days">
+        <label className="check">
           <input
             type="checkbox"
             checked={enabled}

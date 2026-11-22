@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useState, type SyntheticEvent, type ReactNode } from "react";
 import { errorMessage } from "../../constants/labels";
 
 // Label + control wrapper used by every form
@@ -33,7 +33,7 @@ export default function FormShell({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  async function handle(e: FormEvent) {
+  async function handle(e: SyntheticEvent) {
     e.preventDefault();
     setBusy(true);
     setError("");

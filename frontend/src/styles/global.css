@@ -48,7 +48,7 @@ a {
   color: var(--text);
 }
 .btn:hover:not(:disabled) {
-  background: #eef2ea;
+  background: var(--hover);
 }
 .btn:disabled {
   opacity: 0.5;
@@ -122,7 +122,8 @@ textarea {
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--input-bg);
+  color: var(--text);
   width: 100%;
 }
 input:focus,
@@ -132,7 +133,7 @@ textarea:focus {
   outline-offset: 1px;
 }
 .form-error {
-  background: #fdecea;
+  background: var(--error-bg);
   color: var(--danger);
   padding: 8px 10px;
   border-radius: 8px;
@@ -156,6 +157,20 @@ textarea:focus {
 }
 .days input {
   width: auto;
+}
+
+/* A single checkbox + text: the clickable area is only as wide as its content */
+.check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+.check input {
+  width: auto;
+}
+.days label {
+  cursor: pointer;
 }
 
 /* Status badges: always icon + word, never colour alone */
@@ -194,4 +209,10 @@ textarea:focus {
   text-align: start;
   padding: 8px 12px;
   border-bottom: 1px solid var(--border);
+}
+
+/* A link styled as a button: no underline, behaves like a box */
+a.btn {
+  display: inline-block;
+  text-decoration: none;
 }

@@ -57,7 +57,7 @@ export default function SensorForm({
         </Field>
 
         {!sensor && (
-          <label className="days">
+          <label className="check">
             <input
               type="checkbox"
               checked={dht}
@@ -94,7 +94,7 @@ export default function SensorForm({
         )}
 
         {sensor && (
-          <label className="days">
+          <label className="check">
             <input
               type="checkbox"
               checked={active}

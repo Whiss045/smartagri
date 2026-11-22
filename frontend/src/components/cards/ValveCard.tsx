@@ -1,13 +1,19 @@
 import valveImg from "../../assets/cards/valve.png";
+import pumpImg from "../../assets/cards/pump.png";
 import {
   SYSTEM_LABEL,
   VALVE_KIND_LABEL,
   VALVE_STATE,
 } from "../../constants/labels";
-import type { Valve } from "../../types/models";
-import { OnlineBadge } from "../common/StatusBadge";
-import StatusBadge from "../common/StatusBadge";
+import type { Valve, ValveKind } from "../../types/models";
+import StatusBadge, { OnlineBadge } from "../common/StatusBadge";
 import CardShell from "./CardShell";
+
+// The kind of equipment picks the icon: a valve or a pump
+const KIND_IMAGE: Record<ValveKind, string> = {
+  valve: valveImg,
+  pump: pumpImg,
+};
 
 // Assigned valve: manual open/close + unassign. Unassigned valve: assign + delete.
 export default function ValveCard({
@@ -30,7 +36,7 @@ export default function ValveCard({
 
   return (
     <CardShell
-      image={valveImg}
+      image={KIND_IMAGE[valve.kind]}
       title={valve.name}
       subtitle={`${VALVE_KIND_LABEL[valve.kind]} · ${SYSTEM_LABEL[valve.system]}`}
       badges={

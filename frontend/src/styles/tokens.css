@@ -1,5 +1,7 @@
-/* Design tokens: change a colour here and the whole app follows. */
-:root {
+/* Design tokens. The theme on <html data-theme="..."> swaps the whole set. */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
   --bg: #f4f6f1;
   --surface: #ffffff;
   --text: #1f2a1f;
@@ -10,7 +12,56 @@
   --danger: #c0392b;
   --warn: #b9770e;
   --ok: #1e8449;
+  --hover: #eef2ea;
+  --hover-soft: #f8faf6;
+  --error-bg: #fdecea;
+  --input-bg: #ffffff;
   --radius: 12px;
   --shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   --font: "Tajawal", system-ui, sans-serif;
+}
+
+/* Warm: the soft in-between, easy on the eyes in daylight */
+[data-theme="warm"] {
+  color-scheme: light;
+  --bg: #f3ead8;
+  --surface: #fbf5e8;
+  --text: #3a2f1f;
+  --muted: #7a6a52;
+  --border: #e0d3b8;
+  --hover: #efe3c9;
+  --hover-soft: #f6eedc;
+  --error-bg: #f9e0d6;
+  --input-bg: #fffaf0;
+}
+
+/* Dark: for the evening or low light */
+[data-theme="dark"] {
+  color-scheme: dark; /* also darkens native controls (time picker, scrollbars) */
+  --bg: #141a15;
+  --surface: #1d251e;
+  --text: #e6eee6;
+  --muted: #9bab9b;
+  --border: #2c382d;
+  --primary: #2f8a57;
+  --primary-dark: #25704a;
+  --danger: #ff6b5b;
+  --warn: #e0a030;
+  --ok: #4cc27a;
+  --hover: #273228;
+  --hover-soft: #222c23;
+  --error-bg: #3a1f1c;
+  --input-bg: #161d17;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* Font size: everything uses rem, so changing the root size scales the whole app */
+html {
+  font-size: 16px;
+}
+[data-font="small"] {
+  font-size: 14px;
+}
+[data-font="large"] {
+  font-size: 18.5px;
 }

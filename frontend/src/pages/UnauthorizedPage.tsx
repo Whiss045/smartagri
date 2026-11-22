@@ -6,7 +6,7 @@ export default function UnauthorizedPage() {
     <div className="center-screen">
       <div>
         <h1>🔒 غير مصرّح</h1>
-        <p className="muted">
+        <p className="muted" style={{ marginBlock: 16 }}>
           لا يمكن الوصول إلى الصفحة المطلوبة. يرجى التحقق من صلاحيات الوصول
           الخاصة بك أو التأكد من وجود نقطة دخول فعلية لهذه الصفحة
         </p>

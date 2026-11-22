@@ -17,7 +17,7 @@
   cursor: pointer;
 }
 .clickable:hover {
-  background: #f8faf6;
+  background: var(--hover-soft);
 }
 .img {
   width: 56px;

@@ -24,7 +24,7 @@ function Sparkline({ values }: { values: number[] }) {
         width: "100%",
         height: 140,
         color: "var(--primary)",
-        background: "#fff",
+        background: "var(--surface)",
         borderRadius: 12,
       }}
     >

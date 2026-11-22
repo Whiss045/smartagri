@@ -40,7 +40,7 @@
   text-decoration: none;
 }
 .link:hover {
-  background: #eef2ea;
+  background: var(--hover);
 }
 .active {
   background: var(--primary);
