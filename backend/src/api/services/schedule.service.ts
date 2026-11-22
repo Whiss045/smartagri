@@ -61,6 +61,7 @@ async function assertNoOverlap(
       throw new HttpError(
         409,
         `Overlaps with the schedule "${other.name}" on the same valve`,
+        "SCHEDULE_OVERLAP",
       );
     }
   }
@@ -106,11 +107,19 @@ export async function getSchedule(id: number) {
 
 // Parcel and system are derived from the valve, so the client can't create a heating
 // schedule on an irrigation valve (or the reverse). This keeps the two systems separate.
+// Parcel and system are derived from the valve. The valve must be assigned to a device.
 export async function createSchedule(input: Record<string, unknown>) {
   const valve = await Valve.findByPk(
     asInt(input.valveId, "valveId", 1, 4294967295),
   );
-  if (!valve) throw new HttpError(404, "Valve not found");
+  if (!valve) throw new HttpError(404, "Valve not found", "VALVE_NOT_FOUND");
+  if (valve.parcelId === null) {
+    throw new HttpError(
+      409,
+      "Assign the valve to a device before scheduling it",
+      "VALVE_NOT_ASSIGNED",
+    );
+  }
 
   const name = asText(input.name, "name") as string;
   const startTime = parseTime(input.startTime);
@@ -123,7 +132,6 @@ export async function createSchedule(input: Record<string, unknown>) {
   const daysOfWeek = parseDays(input.daysOfWeek);
   const enabled = input.enabled === undefined ? true : input.enabled === true;
 
-  // A disabled schedule never runs, so it can't conflict
   if (enabled)
     await assertNoOverlap(valve.id, daysOfWeek, startTime, durationMinutes);
 

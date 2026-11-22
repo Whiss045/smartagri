@@ -2,7 +2,7 @@
  * PARCEL SERVICE
  * Business logic for parcels: list, read, create, edit, delete.
  */
-import { Parcel, Device, Valve, Sensor, Schedule } from "../models";
+import { Parcel, Plot, Device, Valve, Sensor, Schedule } from "../models";
 import { PARCEL_TYPES } from "../models/parcel.model";
 import sequelize from "../../config/database";
 import { releaseDevice } from "./device.service";
@@ -28,6 +28,7 @@ export async function listParcels() {
 export async function getParcel(id: number) {
   const parcel = await Parcel.findByPk(id, {
     include: [
+      { model: Plot, as: "plots" },
       { model: Device, as: "devices" },
       { model: Valve, as: "valves" },
       { model: Sensor, as: "sensors" },

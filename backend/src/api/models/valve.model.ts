@@ -1,8 +1,9 @@
 /**
  * VALVE MODEL
- * Any controllable equipment (valve or pump) wired to a relay channel on an ESP32.
- * `system` keeps irrigation and heating separate.
- * Components are registered independently from devices, then mapped to a device channel.
+ * Controllable equipment (valve or pump). A valve is REGISTERED on its own (unassigned),
+ * then ASSIGNED to a device channel. Invariant kept by the services:
+ *   deviceId, parcelId and channel are either all set (assigned) or all null (unassigned).
+ * plotId is optional and only meaningful while assigned.
  */
 import {
   DataTypes,
@@ -13,10 +14,9 @@ import {
 } from "sequelize";
 import sequelize from "../../config/database";
 
-// Shared enums (also reused by the schedule model and the services)
 export const VALVE_KINDS = ["valve", "pump"] as const;
 export const SYSTEMS = ["irrigation", "heating"] as const;
-export const VALVE_STATES = ["on", "off", "fault", "unknown"] as const; // Drives the dashboard indicators
+export const VALVE_STATES = ["on", "off", "fault", "unknown"] as const;
 
 export type ValveKind = (typeof VALVE_KINDS)[number];
 export type SystemType = (typeof SYSTEMS)[number];
@@ -28,13 +28,13 @@ export class Valve extends Model<
 > {
   declare id: CreationOptional<number>;
   declare name: string;
-  declare deviceId: number; // Which ESP32 controls it
-  declare parcelId: number; // Which parcel it belongs to (copied from the device at creation)
-  declare channel: number; // Relay channel number on the ESP32
+  declare deviceId: CreationOptional<number | null>; // null = unassigned
+  declare parcelId: CreationOptional<number | null>; // copied from the device on assignment
+  declare plotId: CreationOptional<number | null>;
+  declare channel: CreationOptional<number | null>; // relay channel on the ESP32
   declare kind: ValveKind;
-  declare system: SystemType; // irrigation or heating
-  declare zone: CreationOptional<string | null>; // Optional zone label inside the parcel
-  declare state: CreationOptional<ValveState>; // Last state REPORTED by the device
+  declare system: SystemType;
+  declare state: CreationOptional<ValveState>; // last state REPORTED by the device
   declare stateUpdatedAt: CreationOptional<Date | null>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
@@ -48,9 +48,10 @@ Valve.init(
       primaryKey: true,
     },
     name: { type: DataTypes.STRING(100), allowNull: false },
-    deviceId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    parcelId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: false },
-    channel: { type: DataTypes.SMALLINT.UNSIGNED, allowNull: false },
+    deviceId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    parcelId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    plotId: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
+    channel: { type: DataTypes.SMALLINT.UNSIGNED, allowNull: true },
     kind: {
       type: DataTypes.ENUM(...VALVE_KINDS),
       allowNull: false,
@@ -61,7 +62,6 @@ Valve.init(
       allowNull: false,
       defaultValue: "irrigation",
     },
-    zone: { type: DataTypes.STRING(100), allowNull: true },
     state: {
       type: DataTypes.ENUM(...VALVE_STATES),
       allowNull: false,
@@ -74,7 +74,7 @@ Valve.init(
   {
     sequelize,
     tableName: "valves",
-    // A channel on one device can only be mapped to one valve
+    // One channel of one device drives at most one valve (NULLs are allowed many times)
     indexes: [{ unique: true, fields: ["deviceId", "channel"] }],
   },
 );

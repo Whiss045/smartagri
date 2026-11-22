@@ -1,55 +1,60 @@
 /**
  * HTTP HELPERS (shared utilities)
- * - HttpError: an error carrying an HTTP status code
- * - validators (asText / asInt / asEnum): check and clean untrusted input
- * Services throw HttpError, and error.middleware turns it into a JSON response.
+ * - HttpError: an error carrying an HTTP status AND an optional machine-readable code,
+ *   so the frontend can show an exact Arabic message instead of parsing English text.
+ * - validators: check and clean untrusted input.
  */
 import type { Request } from "express";
 
 export type Body = Record<string, unknown>;
 
-// An error with a status code, e.g. throw new HttpError(404, 'Parcel not found')
 export class HttpError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  code?: string; // e.g. 'DEVICE_OFFLINE'; optional, so older throw sites keep working
+  constructor(status: number, message: string, code?: string) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
-// Type guard: is this value a plain object (not null, not an array)?
 export const isRecord = (v: unknown): v is Body =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
-// Safely returns req.body as an object, even if the client sent nothing or garbage
 export const bodyOf = (req: Request): Body =>
   isRecord(req.body) ? req.body : {};
 
-// Validates a string field. Trims it, enforces max length, and handles required/optional.
+// Validates a string field: trims, enforces max length, handles required/optional
 export function asText(
   v: unknown,
   field: string,
   opts: { required?: boolean; max?: number } = {},
 ): string | null {
   const { required = true, max = 100 } = opts;
-  // Empty values: either an error (required) or null (optional)
   if (v === undefined || v === null || v === "") {
-    if (required) throw new HttpError(400, `${field} is required`);
+    if (required)
+      throw new HttpError(400, `${field} is required`, "VALIDATION");
     return null;
   }
   if (typeof v !== "string")
-    throw new HttpError(400, `${field} must be a string`);
+    throw new HttpError(400, `${field} must be a string`, "VALIDATION");
   const t = v.trim();
   if (!t) {
-    if (required) throw new HttpError(400, `${field} is required`);
+    if (required)
+      throw new HttpError(400, `${field} is required`, "VALIDATION");
     return null;
   }
-  if (t.length > max)
-    throw new HttpError(400, `${field} must be at most ${max} characters`);
+  if (t.length > max) {
+    throw new HttpError(
+      400,
+      `${field} must be at most ${max} characters`,
+      "VALIDATION",
+    );
+  }
   return t;
 }
 
-// Validates an integer within [min, max]. Accepts numeric strings too (useful for query params).
+// Validates an integer within [min, max]. Accepts numeric strings (query params).
 export function asInt(
   v: unknown,
   field: string,
@@ -61,24 +66,40 @@ export function asInt(
     throw new HttpError(
       400,
       `${field} must be an integer between ${min} and ${max}`,
+      "VALIDATION",
     );
   }
   return n;
 }
 
-// Validates that a value is one of a fixed list (e.g. parcel type, valve action)
+// Like asInt, but absent/null/'' means "no value" (null)
+export function asOptionalInt(
+  v: unknown,
+  field: string,
+  min: number,
+  max: number,
+): number | null {
+  if (v === undefined || v === null || v === "") return null;
+  return asInt(v, field, min, max);
+}
+
+// Validates that a value is one of a fixed list
 export function asEnum<T extends string>(
   v: unknown,
   field: string,
   allowed: readonly T[],
 ): T {
   if (typeof v !== "string" || !allowed.includes(v as T)) {
-    throw new HttpError(400, `${field} must be one of: ${allowed.join(", ")}`);
+    throw new HttpError(
+      400,
+      `${field} must be one of: ${allowed.join(", ")}`,
+      "VALIDATION",
+    );
   }
   return v as T;
 }
 
-// Route parameter -> validated positive integer (a bad id gives a clean 400, not a database error)
+// Route parameter -> validated positive integer (bad id = clean 400, not a database error)
 export const idParam = (req: Request, name = "id"): number =>
   asInt(req.params[name], name, 1, 4294967295);
 

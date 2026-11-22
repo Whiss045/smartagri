@@ -9,7 +9,15 @@
  */
 import { Op, type Transaction } from "sequelize";
 import sequelize from "../../config/database";
-import { Device, Parcel, Valve, Sensor, SensorReading } from "../models";
+import {
+  Device,
+  Parcel,
+  Valve,
+  Sensor,
+  SensorReading,
+  Schedule,
+} from "../models";
+import { publishCommand } from "./mqtt.service";
 import { HttpError, asInt, asText, isRecord } from "../utils/http";
 
 // --- Limits and patterns used to reject bad input early ---------------------
@@ -100,26 +108,67 @@ export async function assignDevice(id: number, input: Record<string, unknown>) {
 // Sensor history is always preserved.
 // Core release logic. It runs inside a transaction supplied by the caller, so it can be
 // part of a bigger operation (such as deleting a parcel) that must succeed or fail as a whole.
+// Core release logic, run inside a transaction supplied by the caller.
+// Valves and sensors are DETACHED (they become unassigned), never deleted.
+// Schedules of the detached valves are deleted, because a schedule needs an assigned valve.
 export async function releaseDevice(
   device: Device,
   transaction: Transaction,
 ): Promise<void> {
-  await Valve.destroy({ where: { deviceId: device.id }, transaction }); // schedules go via CASCADE
+  const valves = await Valve.findAll({
+    where: { deviceId: device.id },
+    transaction,
+  });
+
+  // Best effort: close anything reported open before detaching it
+  for (const valve of valves) {
+    if (valve.state === "on" && valve.channel !== null) {
+      try {
+        await publishCommand(device.deviceUid, {
+          channel: valve.channel,
+          action: "off",
+          source: "manual",
+          ts: Date.now(),
+        });
+      } catch (err) {
+        console.error(
+          "[device] could not close valve before release",
+          valve.id,
+          (err as Error).message,
+        );
+      }
+    }
+  }
+
+  if (valves.length > 0) {
+    await Schedule.destroy({
+      where: { valveId: { [Op.in]: valves.map((v) => v.id) } },
+      transaction,
+    });
+    await Valve.update(
+      {
+        deviceId: null,
+        parcelId: null,
+        plotId: null,
+        channel: null,
+        state: "unknown",
+        stateUpdatedAt: null,
+      },
+      { where: { deviceId: device.id }, transaction },
+    );
+  }
+
   await Sensor.update(
-    { deviceId: null, parcelId: null, active: false }, // sensors stay, history is kept
-    { where: { deviceId: device.id }, transaction },
+    {
+      deviceId: null,
+      parcelId: null,
+      plotId: null,
+      channel: null,
+      active: false,
+    },
+    { where: { deviceId: device.id }, transaction }, // readings are untouched
   );
   await device.update({ parcelId: null }, { transaction });
-}
-
-export async function unassignDevice(id: number) {
-  const device = await Device.findByPk(id);
-  if (!device) throw new HttpError(404, "Device not found");
-
-  await sequelize.transaction((transaction) =>
-    releaseDevice(device, transaction),
-  );
-  return toDto(device);
 }
 
 /* =========================== MQTT ingestion ================================ */
